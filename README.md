@@ -7,7 +7,7 @@
 
 [![AstrBot](https://img.shields.io/badge/AstrBot-%E2%89%A54.18.0-blueviolet)](https://docs.astrbot.app)
 [![Python](https://img.shields.io/badge/Python-%E2%89%A53.10-blue)](https://www.python.org)
-[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![License](https://img.shields.io/badge/license-AGPL--3.0-blue)](LICENSE)
 [![Version](https://img.shields.io/badge/version-1.0.0-orange)](CHANGELOG.md)
 [![GitHub](https://img.shields.io/badge/GitHub-tanggetian-black?logo=github)](https://github.com/tanggetian/astrbot_plugin_subagent_caller)
 
