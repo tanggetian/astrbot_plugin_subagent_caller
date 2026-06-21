@@ -1,0 +1,49 @@
+name: astrbot_plugin_subagent_caller
+display_name: astrbot群集调用
+short_desc: 把其他 AstrBot 实例当成子 agent 调度，支持项目 session 多轮对话
+author: 唐格天
+desc: |
+  把其他 AstrBot 实例当成"子 agent"来调用。当前 AstrBot 可以通过 OpenAPI 把消息/任务
+  转发给一个或多个子 AstrBot 实例处理，并回收结果。
+
+  支持：
+  - 同步调用（/subagent_call）—— 把消息发给指定子 AstrBot 跑一次 LLM 对话
+  - 异步任务（/subagent_task）—— 提交后台任务，task_id 查询状态与取消
+  - 广播（/subagent_broadcast）—— 同时调用所有启用的子 AstrBot
+  - 项目 session 多轮对话：/subagent_chat + /subagent_chat_task——
+    以 (subagent, project) 为 key 复用子 AstrBot session_id UUID，多轮上下文由
+    **子 AstrBot 自己**的 (username, session_id) chat history 累积——
+    plugin 端不拼接 history 重发，节省 token + 利用子 AstrBot 现成的 session 体系
+    同一 subagent 可开多个 project session 互不串扰；plugin 端只存 session_id 映射
+  - LLM Tool：
+    - call_subagent / call_subagent_async / broadcast_to_subagents / list_subagents
+    - get_subagent_task_result / clear_subagent_project
+  - WebUI 实例管理（增删改查 + 健康检查）
+  - WebUI 任务列表（运行中 / 历史，含项目 session 后台任务）
+  - WebUI 项目会话 tab：活跃 (subagent, project) → 子 AstrBot session_id 映射列表 + 删 mapping
+  - 白名单 + SQLite 任务审计 + 日志脱敏
+
+  适用场景：让一台 AstrBot 当调度者，把不同 persona / 模型 / 知识库 / 工具集的任务
+  分发给多台 AstrBot 并行处理，或者把负载分流到多台 AstrBot 上。「项目 session」让主控
+  AstrBot 可以在某主题下与子 AstrBot 持续多轮对话——多轮上下文由子 AstrBot 维护，
+  plugin 端只存 session_id 指针。
+version: 1.0.0
+astrbot_version: ">=4.18.0,<5"
+support_platforms:
+  - aiocqhttp
+  - qq_official
+  - telegram
+  - wecom
+  - lark
+  - discord
+keywords:
+  - subagent
+  - openapi
+  - http-api
+  - fan-out
+  - broadcast
+  - background-task
+  - function-calling
+  - project-session
+  - multi-turn
+  - persistent-context

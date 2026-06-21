@@ -1,0 +1,78 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Tests / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+
+# Linters / formatters
+.ruff_cache/
+.mypy_cache/
+.pyright/
+.dmypy.json
+dmypy.json
+
+# Virtual envs
+.venv/
+venv/
+env/
+ENV/
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Backups
+*.bak
+*.bak-*
+*.bak.*
+*.tmp
+*.orig
+*.rej
+
+# Runtime / local dev
+data/
+*.log
+*.sqlite
+*.sqlite3
+*.db
+.env
+.env.local
+
+# Plugin-specific
+# AstrBot 把 SQLite 放到 data/plugins/<PLUGIN>/，本 plugin 也用这个约定
+# 但本目录的 data/ 可能是 AstrBot 运行时生成的（cmd_config.json 等敏感文件已在发布前清理）
