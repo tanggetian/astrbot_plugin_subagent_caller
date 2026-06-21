@@ -347,7 +347,7 @@ WebUI 会按当前 WebUI 语言自动切换。修改 i18n 后**重载插件**生
 
 ## 📄 许可 & 链接
 
-- **许可**：[MIT](LICENSE)
+- **许可**：[GNU AGPL v3](LICENSE)
 - **GitHub**：[tanggetian/astrbot_plugin_subagent_caller](https://github.com/tanggetian/astrbot_plugin_subagent_caller)
 - **更新日志**：[CHANGELOG.md](CHANGELOG.md)
 - **AstrBot 文档**：<https://docs.astrbot.app>
