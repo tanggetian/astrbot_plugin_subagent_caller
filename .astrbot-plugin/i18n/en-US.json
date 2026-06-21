@@ -1,0 +1,64 @@
+{
+  "metadata": {
+    "display_name": "astrbot Cluster Caller",
+    "short_desc": "Dispatch tasks to other AstrBot instances as sub-agents.",
+    "desc": "Forward messages and tasks to one or more sub-AstrBot instances via the AstrBot OpenAPI and collect their results. Supports sync call, background tasks, broadcast, project session multi-turn dialog (plugin stores no history; sub-AstrBot accumulates it), LLM Tool, WebUI instance management and task list."
+  },
+  "config": {
+    "default_timeout": {
+      "description": "[Timeout] Default sub-AstrBot request timeout (seconds)",
+      "hint": "Shared by sync and async calls. Increase to 300~1800s for long-running tasks."
+    },
+    "max_concurrent": {
+      "description": "[Concurrency] Global max concurrent calls",
+      "hint": "Broadcast (/subagent_broadcast) is rate-limited by this semaphore. Default 5."
+    },
+    "verify_ssl": {
+      "description": "[SSL] Verify TLS certificates for sub-AstrBot instances (global default)",
+      "hint": "Enabled by default. Disable only for self-signed certificates — Bearer Token will be sent in plaintext."
+    },
+    "session_lock_timeout": {
+      "description": "[Project session] Lock-wait timeout for same (subagent, project) calls (seconds)",
+      "hint": "Default 30s. Same-key calls queue; error if wait exceeds this. Still active to avoid session_id write races."
+    },
+    "subagents": {
+      "description": "[Initial sub-AstrBot] List seeded to DB on first start",
+      "hint": "Seeded only when the SQLite subagent_instances table is empty. Subsequent edits go through the WebUI instance management page.",
+      "items": {
+        "username": {
+          "description": "[User] What shows in the sub-AstrBot WebUI chat stream sender column",
+          "hint": "Filled = always shown as that value. Empty = fall back to the master sender (backward compatible)."
+        }
+      }
+    },
+    "access_control": {
+      "description": "[Permission] Whitelist and access control",
+      "hint": "Controls which users can invoke this plugin (commands + LLM Tool).",
+      "items": {
+        "allowed_user_ids": {
+          "description": "Allowed user ID list",
+          "hint": "Required when whitelist is enabled. Get a user ID by sending a message to AstrBot and reading sender_id from the log."
+        }
+      }
+    }
+  },
+  "pages": {
+"subagent-page": {
+      "title": "Sub-AstrBot",
+      "description": "Single page with internal tabs: Instance Manager (CRUD + ping + SSL) + Task List (running / history + cancel / delete) + Project Sessions (v1.2+ plan B: only (subagent, project) → sub-AstrBot session_id mapping; history lives in sub-AstrBot).",
+      "heading": "Sub-AstrBot",
+      "tab_manage": "Instances",
+      "tab_tasks": "Tasks",
+      "tab_sessions": "Project Sessions",
+      "manage_heading": "Instance List",
+      "tasks_running_heading": "Running Tasks",
+      "tasks_history_heading": "Historical Tasks",
+      "sessions_heading": "Active Project Session Mappings",
+      "new": "New",
+      "refresh": "Refresh",
+      "modal_new_title": "New sub-AstrBot",
+      "modal_edit_title_prefix": "Edit: "
+    }
+  }
+}
+
