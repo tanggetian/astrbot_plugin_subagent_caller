@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>子 AstrBot</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>子 AstrBot</h1>
+      <nav class="tabs" role="tablist">
+        <button class="tab active" role="tab" data-tab="manage" aria-selected="true">实例管理</button>
+        <button class="tab" role="tab" data-tab="tasks" aria-selected="false">任务列表</button>
+        <button class="tab" role="tab" data-tab="sessions" aria-selected="false">项目会话</button>
+      </nav>
+    </header>
+
+    <!-- Tab: 实例管理 -->
+    <section class="tab-panel" id="panel-manage" role="tabpanel" data-tab="manage">
+      <div class="stats">
+        <span class="stat total">总计：<b id="cnt-total">-</b></span>
+        <span class="stat enabled">已启用：<b id="cnt-enabled">-</b></span>
+        <span class="stat disabled">已禁用：<b id="cnt-disabled">-</b></span>
+        <button id="refresh-manage">刷新</button>
+        <button id="add-new" class="primary">+ 新增</button>
+      </div>
+      <h2>实例列表</h2>
+      <table id="tbl-subagents">
+        <thead>
+          <tr>
+            <th>名称</th>
+            <th>Base URL</th>
+            <th>Token</th>
+            <th>备注</th>
+            <th>被调方 username</th>
+            <th>状态</th>
+            <th>SSL</th>
+            <th>健康检查</th>
+            <th>更新时间</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <!-- Modal: 新增 / 编辑 -->
+      <div id="modal" class="modal hidden">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3 id="modal-title">新增子 AstrBot</h3>
+            <button class="modal-close" id="modal-close">×</button>
+          </div>
+          <form id="form-subagent">
+            <label>
+              <span class="label-text">名称 *</span>
+              <input type="text" id="field-name" required maxlength="64" placeholder="例：claude-bot">
+              <small>唯一标识。后续命令会用到这个名字。</small>
+            </label>
+            <label>
+              <span class="label-text">Base URL *</span>
+              <input type="text" id="field-base-url" required placeholder="http://192.168.1.10:6185">
+              <small>子 AstrBot 根 URL（不含 /api/v1/chat）。没写 http:// 前缀会自动补。</small>
+            </label>
+            <label>
+              <span class="label-text">Token</span>
+              <input type="text" id="field-token" maxlength="200" placeholder="abk_xxx">
+              <small>子 AstrBot WebUI 创建的 API Key，<b>至少需要 chat scope</b>。
+              <b>新增实例必填</b>；编辑实例时留空 = 保留原 token（要换新 token 才填）。</small>
+            </label>
+            <label>
+              <span class="label-text">备注</span>
+              <input type="text" id="field-description" maxlength="200" placeholder="例：远程 Linux 主机上的 Claude 实例">
+            </label>
+            <label>
+              <span class="label-text">子 AstrBot WebUI chat 流的 sender 列显示什么</span>
+              <input type="text" id="field-username" maxlength="200" placeholder="填了就固定显示这个名；留空 = 用主控 sender">
+            </label>
+            <label class="checkbox-row">
+              <input type="checkbox" id="field-enabled" checked>
+              <span>启用此实例</span>
+            </label>
+            <label class="checkbox-row">
+              <input type="checkbox" id="field-verify-ssl" checked>
+              <span>校验 TLS 证书（自签名证书请取消勾选）</span>
+              <small>仅当子 AstrBot 用 <b>自签名 / 私网 CA</b> 签的 HTTPS 证书时关掉。
+              关掉后 Bearer Token 会以明文在网络中传输——只用于本机 / 内网。</small>
+            </label>
+            <div class="form-actions">
+              <button type="button" id="btn-cancel">取消</button>
+              <button type="submit" class="primary" id="btn-save">保存</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab: 任务列表 -->
+    <section class="tab-panel hidden" id="panel-tasks" role="tabpanel" data-tab="tasks">
+      <div class="stats">
+        <span class="stat running">运行中：<b id="cnt-running">-</b></span>
+        <span class="stat done">已完成：<b id="cnt-done">-</b></span>
+        <span class="stat failed">失败：<b id="cnt-failed">-</b></span>
+        <span class="stat cancelled">已取消：<b id="cnt-cancelled">-</b></span>
+        <span class="stat no_recipient">无推送：<b id="cnt-no-recipient">-</b></span>
+        <span class="stat total">总计：<b id="cnt-total-tasks">-</b></span>
+        <button id="refresh-tasks">刷新</button>
+      </div>
+      <h2>运行中任务</h2>
+      <table id="tbl-running">
+        <thead>
+          <tr>
+            <th>子 AstrBot</th>
+            <th>任务</th>
+            <th>模式</th>
+            <th>创建时间</th>
+            <th>task_id</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <h2>历史任务</h2>
+      <table id="tbl-history">
+        <thead>
+          <tr>
+            <th>子 AstrBot</th>
+            <th>任务</th>
+            <th>状态</th>
+            <th>模式</th>
+            <th>创建</th>
+            <th>完成</th>
+            <th>耗时</th>
+            <th>task_id</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <!-- Tab: 项目会话 -->
+    <section class="tab-panel hidden" id="panel-sessions" role="tabpanel" data-tab="sessions">
+      <!-- Inline 确认弹窗（window.confirm() 在 iframe / sandboxed / CSP 环境下可能
+           抛 TypeError 或返 undefined；用 inline 模态作为 fallback，永远可用） -->
+      
+      <div class="stats">
+        <span class="stat total">活跃 session：<b id="cnt-sessions">-</b></span>
+        <button id="refresh-sessions">刷新</button>
+      </div>
+      <p class="muted" style="font-size:12px;margin:0 0 12px;">
+        plugin 端<strong>不存 history 详情</strong>，只存
+        <code>(subagent, project) → 子 AstrBot session_id</code> 的映射。
+        多轮上下文由子 AstrBot 自己的 <code>(username, session_id)</code> chat history 累积——
+        主人调 <code>/subagent_chat</code> 时 plugin 把存的 session_id 发回子 AstrBot，续上下文。
+      </p>
+      <h2>活跃项目 session</h2>
+      <table id="tbl-sessions">
+        <thead>
+          <tr>
+            <th>子 AstrBot</th>
+            <th>项目</th>
+            <th>子 AstrBot session_id</th>
+            <th>主控 owner</th>
+            <th>创建</th>
+            <th>最后更新</th>
+            <th>plugin session_id</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+  </div>
+  <script src="/api/plugin/page/bridge-sdk.js"></script>
+  <script src="./app.js"></script>
+
+    <!-- Inline 确认弹窗 — 移到 panel 外（所有 panel 共享） -->
+    <div id="confirm-overlay" class="modal hidden" role="alertdialog" aria-modal="true">
+        <div class="modal-content" style="max-width:460px;">
+          <div class="modal-header">
+            <h3 id="confirm-title">确认操作</h3>
+          </div>
+          <p id="confirm-message" style="padding:8px 20px 16px; margin:0; line-height:1.5;"></p>
+          <div class="form-actions">
+            <button type="button" id="confirm-cancel">取消</button>
+            <button type="button" class="primary" id="confirm-ok">确认</button>
+          </div>
+        </div>
+      </div>
+
+  </body>
+</html>
