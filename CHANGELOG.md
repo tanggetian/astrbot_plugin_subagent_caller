@@ -5,6 +5,8 @@
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-10-16
+
 ### 变更 (Changed)
 
 - **LLM Tool 调用方式重构为两个正交工具**：
@@ -13,6 +15,12 @@
   - 移除旧 `call_subagent_with_project` 工具；原能力由 `call_subagent(..., project=...)` 覆盖
 - **LLM 可发现子实例**：新增 `list_subagents()`，只返回 `name` / `description` / `username`，不暴露 token / base_url。
 - **同步调用返回值修复**：`call_subagent` 正确返回 `reply=result.reply`，并带回子实例 `session_id`。
+- **AstrBot 4.x 兼容清理**（`core/runner.py`）：
+  - 后台任务推送 fallback 从 `context.get_platform(platform_name)` 迁移到 `context.get_platform_inst(platform_id)`——前者自 AstrBot 4.0.0 起被 `@deprecated` 标记。
+  - `extract_send_target()` 返回的 dict key 从 `platform_name` 重命名为 `platform_id`，与新接口语义对齐（取自 `event.get_platform_id()`，兼容回退 `get_platform_name()`）。
+  - 移除对 `event._is_lite` 的防御性探测——该属性在 AstrBot 当前主版本已不存在，保留为死代码。
+  - 修正相关日志 reason 字段（`event_is_lite_*` → `event_is_none_*`），与实际判断条件一致。
+- **元数据**：`metadata.yaml` 新增 `repo` 字段（指向 GitHub 仓库），启用 WebUI 内的「更新插件」功能。
 
 ## [1.2.0] - 2026-06-20
 
@@ -183,3 +191,4 @@
 [1.0.0]: https://github.com/tanggetian/astrbot_plugin_subagent_caller/releases/tag/v1.0.0
 [1.1.0]: https://github.com/tanggetian/astrbot_plugin_subagent_caller/releases/tag/v1.1.0
 [1.2.0]: https://github.com/tanggetian/astrbot_plugin_subagent_caller/releases/tag/v1.2.0
+[1.3.0]: https://github.com/tanggetian/astrbot_plugin_subagent_caller/releases/tag/v1.3.0

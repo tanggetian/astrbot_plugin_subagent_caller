@@ -5,7 +5,9 @@
 - 异常分类处理：CancelledError / Exception / send 失败
 - 1 小时内存 GC
 - 推送路径：先 event.send() 走原路径；失败 / 无 event 时自动 fallback 到
-  context.get_platform().send_message()——绕开 event 生命周期，是 AstrBot 延迟推送的标准姿势
+  ``context.get_platform_inst(platform_id).send_message()``——绕开 event 生命周期，
+  是 AstrBot 延迟推送的标准姿势（``context.get_platform`` 自 v4.0.0 起已弃用，
+  这里走的是 ``get_platform_inst`` 新接口）
 
 状态全部从参数传入（不读模块级），方便单测和 reload。
 """
@@ -32,9 +34,9 @@ async def _try_send_result(
     context,
     kind: str,  # "done" | "failed" — 仅用于日志区分
 ) -> bool:
-    """按顺序尝试：``event.send()`` → ``context.get_platform().send_message()`` 平台 fallback。"""
+    """按顺序尝试：``event.send()`` → ``context.get_platform_inst(platform_id).send_message()`` 平台 fallback。"""
     # 路径 1（主）：event.send()——对真 event 仍在生命周期内的快任务最直接
-    if event is not None and not getattr(event, "_is_lite", False):
+    if event is not None:
         try:
             await event.send(MessageChain([Plain(msg)]))
             logger.info(
@@ -48,28 +50,28 @@ async def _try_send_result(
                 "（尝试 platform fallback）"
             )
 
-    # 路径 2（fallback）：context.get_platform().send_message()——不绑 event 生命周期
+    # 路径 2（fallback）：context.get_platform_inst(platform_id).send_message()——不绑 event 生命周期
     if not platform_meta or not context:
         logger.error(
             f"[subagent bg] phase=end task_id={task_id} status={kind} "
             "push_via=all_failed（event.send 失败且无 platform fallback）"
         )
         return False
-    platform_name = platform_meta.get("platform_name", "")
+    platform_id = platform_meta.get("platform_id", "")
     session_id = platform_meta.get("session_id", "")
-    if not platform_name or not session_id:
+    if not platform_id or not session_id:
         logger.error(
             f"[subagent bg] phase=end task_id={task_id} status={kind} "
             "push_via=all_failed（event.send 失败且 platform_meta 不完整）"
         )
         return False
     try:
-        platform = context.get_platform(platform_name)
+        platform = context.get_platform_inst(platform_id)
     except Exception as lookup_err:
         logger.error(
             f"[subagent bg] phase=end task_id={task_id} status={kind} "
             f"push_via=platform_fallback_failed error={type(lookup_err).__name__} "
-            f"platform={platform_name}",
+            f"platform_id={platform_id}",
             exc_info=True,
         )
         return False
@@ -77,36 +79,42 @@ async def _try_send_result(
         logger.warning(
             f"[subagent bg] phase=end task_id={task_id} status={kind} "
             f"push_via=platform_fallback_failed reason=platform_not_found "
-            f"platform={platform_name}"
+            f"platform_id={platform_id}"
         )
         return False
     try:
         await platform.send_message(session_id, MessageChain([Plain(msg)]))
         logger.info(
             f"[subagent bg] phase=end task_id={task_id} status={kind} "
-            f"push_via=platform_fallback platform={platform_name}"
+            f"push_via=platform_fallback platform_id={platform_id}"
         )
         return True
     except Exception as fallback_err:
         logger.error(
             f"[subagent bg] phase=end task_id={task_id} status={kind} "
             f"push_via=platform_fallback_failed error={type(fallback_err).__name__} "
-            f"platform={platform_name}",
+            f"platform_id={platform_id}",
             exc_info=True,
         )
         return False
 
 
 def _extract_send_target(event) -> dict:
-    """从 event 抓出 (platform_name, session_id) — 后台任务完成时推送用。"""
+    """从 event 抓出 ``(platform_id, session_id)`` —— 后台任务完成时推送用。
+
+    platform 优先取 ``get_platform_id``（AstrBot 平台适配器的唯一 ID，是
+    ``context.get_platform_inst()`` 的入参），回退到 ``get_platform_name``
+    兼容没暴露 ``get_platform_id`` 的旧自定义事件。统一规整成 ``[a-z0-9_-]+``
+    以避免特殊字符污染后续日志或 SQL。
+    """
     if event is None:
         return {}
-    platform_name = ""
+    platform_id = ""
     for method in ("get_platform_id", "get_platform_name"):
         try:
             value = getattr(event, method, lambda: "")()
             if value:
-                platform_name = str(value)
+                platform_id = str(value)
                 break
         except Exception:
             pass
@@ -119,10 +127,10 @@ def _extract_send_target(event) -> dict:
         pass
     import re
 
-    if not platform_name or not session_id:
+    if not platform_id or not session_id:
         return {}
     return {
-        "platform_name": re.sub(r"[^a-zA-Z0-9_-]+", "-", platform_name)
+        "platform_id": re.sub(r"[^a-zA-Z0-9_-]+", "-", platform_id)
         .strip("-")
         .lower(),
         "session_id": session_id,
@@ -141,8 +149,8 @@ async def background_run(
     bg_tasks: dict[str, dict[str, Any]],
     task_handles: dict[str, asyncio.Task],
     platform_meta: dict
-    | None = None,  # {platform_name, session_id}——延迟推送 fallback 用
-    context=None,  # AstrBot Context——context.get_platform() 拿平台适配器
+    | None = None,  # {platform_id, session_id}——延迟推送 fallback 用
+    context=None,  # AstrBot Context——context.get_platform_inst() 拿平台适配器
     username: str = "subagent_caller",
     # === 项目 session 模式（可选）===
     project: str | None = None,  # 项目名；为 None 时走老路径
@@ -186,11 +194,11 @@ async def background_run(
         f"has_platform_fallback={bool(platform_meta and context)}"
     )
 
-    has_recipient = event is not None and not getattr(event, "_is_lite", False)
+    has_recipient = event is not None
     if not has_recipient and not (platform_meta and context):
         logger.warning(
             f"[subagent bg] phase=start task_id={task_id} "
-            "event_is_lite=true 且无 platform fallback——结果仅写 SQLite，Plugin Page 标 no_recipient。"
+            "event_is_none=true 且无 platform fallback——结果仅写 SQLite，Plugin Page 标 no_recipient。"
         )
 
     from .util import sanitize_error
@@ -459,11 +467,11 @@ async def _finish_task(
         task_log.update(info)
         logger.warning(
             f"[subagent bg] phase=end task_id={task_id} status=no_recipient "
-            f"reason=event_is_lite_no_fallback total_s={time.time() - t0:.2f} "
+            f"reason=event_is_none_no_fallback total_s={time.time() - t0:.2f} "
             "（任务完成但无任何推送通道）"
         )
 
 
 def extract_send_target(event) -> dict:
-    """公开的 helper——main.py 用：把 event 抓出 (platform_name, session_id)。"""
+    """公开的 helper——main.py 用：把 event 抓出 ``(platform_id, session_id)``。"""
     return _extract_send_target(event)
